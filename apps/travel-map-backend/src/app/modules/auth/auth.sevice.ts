@@ -8,33 +8,59 @@ import { Observable, of } from 'rxjs';
 import * as bcrypt from 'bcrypt';
 import { JwtService } from '@nestjs/jwt';
 import { ErrorsEnum } from '../core/enums/errors.enum';
+import { UsersService } from '../users/users.service';
+import { Repository } from 'typeorm';
+import { User } from '../users/entities/user.entity';
+import { InjectRepository } from '@nestjs/typeorm';
 
 @Injectable()
 export class AuthService {
-  private users = [
-    { id: 1, email: 'test@mail.com', passwordHash: bcrypt.hashSync('123456', 10) },
-  ];
-
-  constructor(public jwtService: JwtService) {}
+  constructor(
+    public jwtService: JwtService,
+    private usersService: UsersService,
+    @InjectRepository(User)
+    private userRepository: Repository<User>
+  ) {}
 
   public async validateUser(email: string, password: string) {
-    const user = this.users.find(u => u.email === email);
+    const user = await this.usersService.findByEmail(email);
 
-    if (!user)
+    if (!user) {
       throw new HttpException(
-        {
-          errorCode: ErrorsEnum.INVALID_LOGIN_OR_PASSWORD,
-        },
+        { errorCode: ErrorsEnum.INVALID_LOGIN_OR_PASSWORD },
         HttpStatus.UNAUTHORIZED,
       );
+    }
 
     const isMatch = await bcrypt.compare(password, user.passwordHash);
 
-    if (!isMatch) throw new UnauthorizedException();
+    if (!isMatch) {
+      throw new UnauthorizedException();
+    }
 
-    return { id: user.id, email: user.email };
+    return user;
   }
 
+  public async signUpUser(data: { email: string; password: string; name: string }) {
+    const existingUser = await this.usersService.findByEmail(data.email);
+
+    if (existingUser) {
+      throw new HttpException(
+        { errorCode: ErrorsEnum.USER_ALREADY_EXISTS },
+        HttpStatus.BAD_REQUEST,
+      );
+    }
+
+    const passwordHash = await bcrypt.hash(data.password, 10);
+
+    const user = this.userRepository.create({
+      name: data.name,
+      email: data.email,
+      passwordHash,
+    });
+
+    return this.userRepository.save(user);
+  }
 
   public generateAccessToken(payload: any) {
     return this.jwtService.sign(payload, { expiresIn: '15m' });
