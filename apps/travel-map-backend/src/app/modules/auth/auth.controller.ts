@@ -2,15 +2,17 @@ import {
   Body,
   Controller,
   Get,
+  HttpException,
+  HttpStatus,
   Post,
   Req,
   Res,
-  UnauthorizedException,
   UseGuards,
 } from '@nestjs/common';
 import { AuthService } from './auth.sevice';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import { Request, Response } from 'express';
+import { ErrorsEnum } from '../core/enums/errors.enum';
 
 @Controller('auth')
 export class AuthController {
@@ -38,7 +40,15 @@ export class AuthController {
   @Post('refresh')
   async refresh(@Req() req: Request, @Res({ passthrough: true }) res: Response) {
     const refreshToken = req.cookies['refresh_token'];
-    if (!refreshToken) throw new UnauthorizedException();
+
+    if (!refreshToken) {
+      throw new HttpException(
+        {
+          errorCode: ErrorsEnum.UNAUTHORIZED,
+        },
+        HttpStatus.UNAUTHORIZED,
+      );
+    }
 
     try {
       const payload = await this.authService.jwtService.verifyAsync(refreshToken);
@@ -55,7 +65,12 @@ export class AuthController {
 
       return { accessToken: newAccessToken };
     } catch {
-      throw new UnauthorizedException();
+      throw new HttpException(
+        {
+          errorCode: ErrorsEnum.UNAUTHORIZED,
+        },
+        HttpStatus.UNAUTHORIZED,
+      );
     }
   }
 
