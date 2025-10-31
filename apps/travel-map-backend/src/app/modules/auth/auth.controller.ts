@@ -24,8 +24,11 @@ export class AuthController {
     @Res({ passthrough: true }) res: Response,
   ) {
     const user = await this.authService.validateUser(body.email, body.password);
-    const accessToken = this.authService.generateAccessToken(user);
-    const refreshToken = this.authService.generateRefreshToken(user);
+
+    const payload = { id: user.id, email: user.email };
+
+    const accessToken = this.authService.generateAccessToken(payload);
+    const refreshToken = this.authService.generateRefreshToken(payload);
 
     res.cookie('refresh_token', refreshToken, {
       httpOnly: true,
@@ -35,6 +38,16 @@ export class AuthController {
     });
 
     return { accessToken };
+  }
+
+  @Post('sign-up')
+  async signUp(
+    @Body() body: { email: string; password: string; name: string },
+  ) {
+    const user = await this.authService.signUpUser(body);
+
+    const { passwordHash, ...safeUser } = user;
+    return { user: safeUser };
   }
 
   @Post('refresh')
@@ -80,14 +93,6 @@ export class AuthController {
     return { success: true };
   }
 
-
-
-
-
-
-
-
-
   @Get('test')
   public test() {
     return this.authService.test();
@@ -98,10 +103,4 @@ export class AuthController {
   public prot() {
     return this.authService.test();
   }
-
-  // @Post('register')
-  // register() {}
-  //
-  // @Post('login')
-  // login() {}
 }
