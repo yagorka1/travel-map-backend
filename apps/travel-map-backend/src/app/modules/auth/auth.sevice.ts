@@ -1,7 +1,13 @@
-import { Injectable, UnauthorizedException } from '@nestjs/common';
+import {
+  HttpException,
+  HttpStatus,
+  Injectable,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { Observable, of } from 'rxjs';
 import * as bcrypt from 'bcrypt';
 import { JwtService } from '@nestjs/jwt';
+import { ErrorsEnum } from '../core/enums/errors.enum';
 
 @Injectable()
 export class AuthService {
@@ -14,7 +20,13 @@ export class AuthService {
   public async validateUser(email: string, password: string) {
     const user = this.users.find(u => u.email === email);
 
-    if (!user) throw new UnauthorizedException();
+    if (!user)
+      throw new HttpException(
+        {
+          errorCode: ErrorsEnum.INVALID_LOGIN_OR_PASSWORD,
+        },
+        HttpStatus.UNAUTHORIZED,
+      );
 
     const isMatch = await bcrypt.compare(password, user.passwordHash);
 
