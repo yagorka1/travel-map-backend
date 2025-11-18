@@ -6,6 +6,7 @@ import { ChatMember } from './entities/chat-member.entity';
 import { User } from '../users/entities/user.entity';
 import { UserChatDto } from '../users/dto/user-chat.dto';
 import { Message } from './entities/message.entity';
+import { ChatGateway } from './gateways/chat.gateway';
 
 @Injectable()
 export class ChatsService {
@@ -21,6 +22,7 @@ export class ChatsService {
 
     @InjectRepository(User)
     private userRepo: Repository<User>,
+    private readonly chatGateway: ChatGateway,
   ) {}
 
   public async createChat(data: { name: string; ownerId: string, membersIds: string[] }) {
@@ -128,7 +130,11 @@ export class ChatsService {
       content,
     });
 
-    return await this.messageRepo.save(message);
+    const savedMessage = await this.messageRepo.save(message)
+
+    this.chatGateway.sendNewMessage(chat.id, savedMessage);
+
+    return savedMessage;
   }
 
   public async getMessages(chatId: string) {
