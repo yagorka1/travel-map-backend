@@ -30,6 +30,6 @@ import { User } from '../../users/entities/user.entity';
   @Column()
   senderId: string;
 
-  @Column({ type: 'timestamp', default: () => 'CURRENT_TIMESTAMP' })
+  @Column({ type: 'timestamptz', default: () => 'CURRENT_TIMESTAMP' })
   created_at: Date;
 }

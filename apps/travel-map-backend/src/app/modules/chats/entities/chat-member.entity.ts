@@ -16,6 +16,9 @@ export class ChatMember {
   @Column({ default: 'member' })
   role: string;
 
-  @Column({ type: 'timestamp', default: () => 'CURRENT_TIMESTAMP' })
+  @Column({ type: 'timestamptz', default: () => 'CURRENT_TIMESTAMP' })
   joined_at: Date;
+
+  @Column({ type: 'timestamptz', default: () => 'CURRENT_TIMESTAMP', nullable: true })
+  readAt: Date | null;
 }
