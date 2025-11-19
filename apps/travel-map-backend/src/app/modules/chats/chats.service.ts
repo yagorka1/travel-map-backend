@@ -22,18 +22,22 @@ export class ChatsService {
 
     @InjectRepository(User)
     private userRepo: Repository<User>,
-    private readonly chatGateway: ChatGateway,
+    private readonly chatGateway: ChatGateway
   ) {}
 
-  public async createChat(data: { name: string; ownerId: string, membersIds: string[] }) {
+  public async createChat(data: {
+    name: string;
+    ownerId: string;
+    membersIds: string[];
+  }) {
     const chat: Chat = this.chatRepo.create({ name: data.name });
     await this.chatRepo.save(chat);
 
-    const members: ChatMember[] = data.membersIds.map(userId =>
+    const members: ChatMember[] = data.membersIds.map((userId) =>
       this.memberRepo.create({
         user: { id: userId },
         chat,
-      }),
+      })
     );
 
     await this.memberRepo.save(members);
@@ -56,23 +60,26 @@ export class ChatsService {
       return [];
     }
 
-    const members = await this.memberRepo?.find({
-      where: { user: { id: userId } },
-      relations: ['chat', 'chat.members', 'chat.members.user'],
-    }) || [];
+    const members =
+      (await this.memberRepo?.find({
+        where: { user: { id: userId } },
+        relations: ['chat', 'chat.members', 'chat.members.user'],
+      })) || [];
 
-    return members?.map(m => {
-      const otherMember = m.chat.members.find(member => member.user.id !== userId);
+    return members?.map((m) => {
+      const otherMember = m.chat.members.find(
+        (member) => member.user.id !== userId
+      );
 
       return {
         chat: { id: m.chat.id, name: m.chat.name },
         user: otherMember
           ? {
-            id: otherMember.user.id,
-            name: otherMember.user.name,
-            email: otherMember.user.email,
-            avatarUrl: otherMember.user.avatarUrl,
-          }
+              id: otherMember.user.id,
+              name: otherMember.user.name,
+              email: otherMember.user.email,
+              avatarUrl: otherMember.user.avatarUrl,
+            }
           : null,
       };
     });
@@ -94,12 +101,15 @@ export class ChatsService {
       },
     });
 
-    return users.map(user => new UserChatDto({
-      id: user.id,
-      name: user.name,
-      email: user.email,
-      avatarUrl: user.avatarUrl,
-    }));
+    return users.map(
+      (user) =>
+        new UserChatDto({
+          id: user.id,
+          name: user.name,
+          email: user.email,
+          avatarUrl: user.avatarUrl,
+        })
+    );
   }
 
   public async sendMessage(
@@ -108,35 +118,88 @@ export class ChatsService {
     senderId: string,
     chatId: string | undefined,
   ) {
-    let chat;
+    try {
+      if (!content || !receiverId || !senderId) {
+        throw new Error('Missing required fields: content, receiverId, senderId');
+      }
 
-    if (!chatId) {
-      chat = await this.createChat({
-        name: 'Chat',
-        ownerId: senderId,
-        membersIds: [senderId, receiverId],
+      let chat;
+
+      if (!chatId) {
+        chat = await this.createChat({
+          name: 'Chat',
+          ownerId: senderId,
+          membersIds: [senderId, receiverId],
+        });
+
+        if (!chat) {
+          throw new Error('Failed to create chat');
+        }
+      } else {
+        chat = await this.chatRepo.findOne({
+          where: { id: chatId },
+          relations: ['members', 'members.user'],
+        });
+
+        if (!chat) {
+          throw new Error(`Chat with id ${chatId} not found`);
+        }
+      }
+
+
+      const sender = await this.userRepo.findOne({ where: { id: senderId } });
+      if (!sender) {
+        throw new Error(`Sender user with id ${senderId} not found`);
+      }
+
+
+      const message = this.messageRepo.create({
+        chat,
+        chatId: chat.id,
+        sender,
+        senderId: sender.id,
+        content,
       });
-    } else {
-      chat = await this.chatRepo?.findOne({ where: { id: chatId }, relations: ['members'] })
+
+      const savedMessage = await this.messageRepo.save(message);
+      if (!savedMessage) {
+        throw new Error('Failed to save message');
+      }
+
+
+
+      try {
+        for (const m of chat.members) {
+          if (m.user.id !== senderId) {
+            await this.emitUnreadCount(m.user.id);
+          }
+        }
+      } catch (err) {
+        console.error('Error while emitting unread count:', err);
+      }
+
+      try {
+        this.chatGateway.sendNewMessage(chat.id, savedMessage);
+      } catch (err) {
+        console.error('WebSocket sendNewMessage error:', err);
+      }
+
+      console.log('New message created:', message.id, message.created_at);
+
+      const members = await this.memberRepo.find({ where: { chat: { id: chatId } } });
+      for (const member of members) {
+        console.log('member.readAt:', member.readAt);
+        const unread = message.created_at > (member.readAt || new Date(0));
+        console.log('Unread?', unread, 'for member', member.id);
+      }
+
+      return savedMessage;
+    } catch (error) {
+      console.error('sendMessage error:', error);
+
+      throw new Error(`Failed to send message: ${error.message}`);
     }
-
-    const sender = await this.userRepo.findOne({ where: { id: senderId } });
-
-    const message = this.messageRepo.create({
-      chat,
-      chatId: chat.id,
-      sender,
-      senderId: sender.id,
-      content,
-    });
-
-    const savedMessage = await this.messageRepo.save(message)
-
-    this.chatGateway.sendNewMessage(chat.id, savedMessage);
-
-    return savedMessage;
   }
-
   public async getMessages(chatId: string) {
     return this.messageRepo.find({
       where: { chat: { id: chatId } },
@@ -146,5 +209,73 @@ export class ChatsService {
       },
       order: { created_at: 'ASC' },
     });
+  }
+
+  public async markChatAsRead(chatId: string, userId: string) {
+    const member = await this.memberRepo.findOne({
+      where: { chat: { id: chatId }, user: { id: userId } },
+    });
+
+    if (!member) return;
+
+    member.readAt = new Date();
+    await this.memberRepo.save(member);
+
+    await this.emitUnreadCount(userId);
+  }
+
+  public async getUnreadForUser(userId: string) {
+    const members = await this.memberRepo.find({
+      where: { user: { id: userId } },
+      relations: ['chat', 'chat.messages', 'chat.messages.sender'],
+    });
+
+    const result: Array<{
+      chatId: string;
+      unreadCount: number;
+      lastMessage: any | null;
+    }> = [];
+
+    let totalUnread = 0;
+
+    for (const member of members) {
+      const { chat, readAt } = member;
+
+      const sortedMessages = [...chat.messages].sort(
+        (a, b) => +new Date(b.created_at) - +new Date(a.created_at)
+      );
+
+      const lastMessage = sortedMessages[0] ?? null;
+
+      const lastReadTime = readAt ? new Date(readAt).getTime() : 0;
+
+      const unread = sortedMessages.filter(m => {
+        const senderId = m.sender?.id ?? m.senderId;
+
+        if (!senderId) return false;
+
+        const messageTime = new Date(m.created_at).getTime();
+
+        return senderId !== userId && messageTime > lastReadTime;
+      }).length;
+
+      totalUnread += unread;
+
+      result.push({
+        chatId: chat.id,
+        unreadCount: unread,
+        lastMessage,
+      });
+    }
+
+    return {
+      totalUnread,
+      chats: result,
+    };
+  }
+
+  private async emitUnreadCount(userId: string) {
+    const unread = await this.getUnreadForUser(userId);
+    this.chatGateway.sendUnread(userId, unread);
   }
 }
