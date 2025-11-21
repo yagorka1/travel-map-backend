@@ -12,6 +12,7 @@ import { UsersService } from '../users/users.service';
 import { Repository } from 'typeorm';
 import { User } from '../users/entities/user.entity';
 import { InjectRepository } from '@nestjs/typeorm';
+import { LanguageEnum } from '../users/enums/language.enum';
 
 @Injectable()
 export class AuthService {
@@ -41,7 +42,7 @@ export class AuthService {
     return user;
   }
 
-  public async signUpUser(data: { email: string; password: string; name: string }) {
+  public async signUpUser(data: { email: string; password: string; name: string; language?: LanguageEnum }) {
     const existingUser = await this.usersService.findByEmail(data.email);
 
     if (existingUser) {
@@ -57,6 +58,7 @@ export class AuthService {
       name: data.name,
       email: data.email,
       passwordHash,
+      language: data.language || LanguageEnum.EN,
     });
 
     return this.userRepository.save(user);
@@ -68,9 +70,5 @@ export class AuthService {
 
   public generateRefreshToken(payload: any) {
     return this.jwtService.sign(payload, { expiresIn: '7d' });
-  }
-
-  public test(): Observable<any> {
-    return of({ message: 'test request' });
   }
 }

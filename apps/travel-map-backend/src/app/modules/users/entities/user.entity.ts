@@ -7,6 +7,7 @@ import {
   OneToMany,
 } from 'typeorm';
 import { ChatMember } from '../../chats/entities/chat-member.entity';
+import { LanguageEnum } from '../enums/language.enum';
 
 @Entity()
 export class User {
@@ -27,6 +28,13 @@ export class User {
 
   @Column({ nullable: true })
   bio?: string;
+
+  @Column({
+    type: 'enum',
+    enum: LanguageEnum,
+    default: LanguageEnum.EN,
+  })
+  language: LanguageEnum;
 
   @CreateDateColumn()
   createdAt: Date;

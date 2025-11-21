@@ -92,15 +92,4 @@ export class AuthController {
     res.clearCookie('refresh_token', { path: '/' });
     return { success: true };
   }
-
-  @Get('test')
-  public test() {
-    return this.authService.test();
-  }
-
-  @UseGuards(JwtAuthGuard)
-  @Get('protected')
-  public prot() {
-    return this.authService.test();
-  }
 }

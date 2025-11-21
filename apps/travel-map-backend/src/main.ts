@@ -1,15 +1,22 @@
-
-import { Logger } from '@nestjs/common';
+import { Logger, ValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app/app.module';
 import cookieParser from 'cookie-parser';
 import { ErrorsFilter } from './app/modules/core/filters/errors.filter';
+import { join } from 'path';
+import * as express from 'express';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
   const globalPrefix = 'api';
   app.setGlobalPrefix(globalPrefix);
   app.useGlobalFilters(new ErrorsFilter());
+  app.useGlobalPipes(new ValidationPipe({ transform: true }));
+
+  app.use(
+  '/uploads',
+  express.static(join(process.cwd(), 'uploads'))
+);
 
   const port = process.env.PORT || 3000;
 

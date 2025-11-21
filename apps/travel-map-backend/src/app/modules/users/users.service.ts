@@ -1,9 +1,19 @@
 import {
   Injectable,
+  HttpException,
+  HttpStatus,
 } from '@nestjs/common';
 import { User } from './entities/user.entity';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+import * as bcrypt from 'bcrypt';
+import { ChangePasswordDto } from './dto/change-password.dto';
+import { UpdateProfileDto } from './dto/update-profile.dto';
+import { ErrorsEnum } from '../core/enums/errors.enum';
+import * as fs from 'fs';
+import { promisify } from 'util';
+
+const unlinkAsync = promisify(fs.unlink);
 
 @Injectable()
 export class UsersService {
@@ -18,5 +28,90 @@ export class UsersService {
 
   public findByEmail(email: string): Promise<User> {
     return this.userRepository.findOne({ where: { email } });
+  }
+
+  public async getUserProfile(userId: string): Promise<Omit<User, 'passwordHash'>> {
+    const user = await this.userRepository.findOne({ where: { id: userId } });
+
+    if (!user) {
+      throw new HttpException(
+        { errorCode: ErrorsEnum.USER_NOT_FOUND },
+        HttpStatus.NOT_FOUND
+      );
+    }
+
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { passwordHash, ...safeUser } = user;
+    return safeUser;
+  }
+
+  public async changePassword(userId: string, changePasswordDto: ChangePasswordDto): Promise<void> {
+    const { currentPassword, newPassword, confirmPassword } = changePasswordDto;
+
+    if (newPassword !== confirmPassword) {
+      throw new HttpException(
+        { errorCode: ErrorsEnum.PASSWORD_MISMATCH },
+        HttpStatus.BAD_REQUEST
+      );
+    }
+
+    const user = await this.userRepository.findOne({ where: { id: userId } });
+    if (!user) {
+      throw new HttpException(
+        { errorCode: ErrorsEnum.USER_NOT_FOUND },
+        HttpStatus.NOT_FOUND
+      );
+    }
+
+    const isMatch = await bcrypt.compare(currentPassword, user.passwordHash);
+    if (!isMatch) {
+      throw new HttpException(
+        { errorCode: ErrorsEnum.INCORRECT_CURRENT_PASSWORD },
+        HttpStatus.BAD_REQUEST
+      );
+    }
+
+    user.passwordHash = await bcrypt.hash(newPassword, 10);
+    await this.userRepository.save(user);
+  }
+
+  public async updateProfile(
+    userId: string,
+    updateProfileDto: UpdateProfileDto,
+    avatarFile?: Express.Multer.File
+  ): Promise<Omit<User, 'passwordHash'>> {
+    const user = await this.userRepository.findOne({ where: { id: userId } });
+    if (!user) {
+      throw new HttpException(
+        { errorCode: ErrorsEnum.USER_NOT_FOUND },
+        HttpStatus.NOT_FOUND
+      );
+    }
+
+    if (updateProfileDto.name !== undefined) {
+      user.name = updateProfileDto.name;
+    }
+
+    if (updateProfileDto.language !== undefined) {
+      user.language = updateProfileDto.language;
+    }
+
+    if (avatarFile) {
+      if (user.avatarUrl) {
+        try {
+          await unlinkAsync(user.avatarUrl);
+        } catch (error) {
+          console.error('Error deleting old avatar:', error);
+        }
+      }
+
+      user.avatarUrl = avatarFile.path;
+    }
+
+    await this.userRepository.save(user);
+
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { passwordHash, ...safeUser } = user;
+    return safeUser;
   }
 }
