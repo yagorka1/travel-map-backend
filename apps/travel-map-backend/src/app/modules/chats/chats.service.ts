@@ -146,12 +146,10 @@ export class ChatsService {
         }
       }
 
-
       const sender = await this.userRepo.findOne({ where: { id: senderId } });
       if (!sender) {
         throw new Error(`Sender user with id ${senderId} not found`);
       }
-
 
       const message = this.messageRepo.create({
         chat,
