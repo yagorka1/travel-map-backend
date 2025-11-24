@@ -3,6 +3,7 @@ import { InjectRepository } from "@nestjs/typeorm";
 import { Repository } from "typeorm";
 import { getDistance } from 'geolib';
 import { Route } from "./entities/route.entity";
+import { CreateRouteDto } from "./dto/create-route.dto";
 
 @Injectable()
 export class RoutesService {
@@ -11,7 +12,7 @@ export class RoutesService {
     private routeRepository: Repository<Route>
   ) {}
 
-  public calculateDistance(points: { lat: number; lng: number }[]) {
+  public calculateDistance(points: CreateRouteDto['points']): number {
     let total = 0;
 
     for (let i = 1; i < points.length; i++) {
@@ -26,5 +27,12 @@ export class RoutesService {
     if (distance < 5000) return 10;
     if (distance < 20000) return 20;
     return 30;
+  }
+
+  public async getUserRoutes(userId: string): Promise<Route[]> {
+    return this.routeRepository.find({
+      where: { userId },
+      order: { createdAt: 'DESC' },
+    });
   }
 }
