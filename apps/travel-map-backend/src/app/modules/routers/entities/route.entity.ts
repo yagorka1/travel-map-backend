@@ -5,8 +5,8 @@ export class Route {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-    @Column({ type: 'uuid' })
-    userId: string;
+  @Column({ type: 'uuid' })
+  userId: string;
 
   @Column()
   name: string;
@@ -23,6 +23,12 @@ export class Route {
 
   @Column({ type: 'int' })
   pointsEarned: number;
+
+  @Column()
+  startDate: Date;
+
+  @Column()
+  endDate: Date;
 
   @CreateDateColumn()
   createdAt: Date;
