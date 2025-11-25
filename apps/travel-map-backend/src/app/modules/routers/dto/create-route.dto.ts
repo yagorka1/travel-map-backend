@@ -1,4 +1,4 @@
-import { IsNotEmpty, IsString, IsArray, ValidateNested, IsDate, Validate } from 'class-validator';
+import { IsNotEmpty, IsString, IsArray, ValidateNested, IsDate, Validate, IsOptional, Matches } from 'class-validator';
 import { Type } from 'class-transformer';
 import { IsEndDateAfterStartDate } from '../validators/is-end-date-after-start-date.validator';
 
@@ -33,4 +33,9 @@ export class CreateRouteDto {
   @IsDate()
   @Validate(IsEndDateAfterStartDate)
   endDate: Date;
+
+  @IsString()
+  @IsOptional()
+  @Matches(/^#[0-9A-F]{6}$/i, { message: 'Color must be a valid hex color' })
+  color?: string;
 }
