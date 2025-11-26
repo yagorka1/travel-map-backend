@@ -11,6 +11,7 @@ import { ChatMember } from './modules/chats/entities/chat-member.entity';
 import { Chat } from './modules/chats/entities/chat.entity';
 import { RoutesModule } from './modules/routers/routes.module';
 import { Route } from './modules/routers/entities/route.entity';
+import { LeaderboardModule } from './modules/leaderboard/leaderboard.module';
 
 @Module({
   imports: [
@@ -18,6 +19,7 @@ import { Route } from './modules/routers/entities/route.entity';
     UsersModule,
     ChatsModule,
     RoutesModule,
+    LeaderboardModule,
     TypeOrmModule.forRoot({
       type: 'postgres',
       host: 'localhost',
