@@ -36,7 +36,7 @@ export class RoutesController {
   @Get(':id')
   public async getUserRoute(@Request() req): Promise<Route> {
     try {
-      return await this.routesService.getUserRoute(req.user.userId, req.params.id);
+      return await this.routesService.getRouteById(req.params.id);
     } catch (error) {
       console.error(error);
       throw new HttpException(

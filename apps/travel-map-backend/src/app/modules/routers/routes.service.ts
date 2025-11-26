@@ -50,10 +50,10 @@ export class RoutesService {
       total += getDistance(points[i - 1], points[i]);
     }
 
-    return total; // meters
+    return total;
   }
 
-  public calculatePoints(distance: number): number { // ToDo implement points system 
+  public calculatePoints(distance: number): number {
     if (distance < 1000) return 5;
     if (distance < 5000) return 10;
     if (distance < 20000) return 20;
@@ -67,9 +67,9 @@ export class RoutesService {
     });
   }
 
-  public async getUserRoute(userId: string, routeId: string): Promise<Route> {
+  public async getRouteById(routeId: string): Promise<Route> {
     return this.routeRepository.findOne({
-      where: { userId, id: routeId },
+      where: { id: routeId },
     });
   }
 }
