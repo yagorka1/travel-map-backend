@@ -1,18 +1,23 @@
 import {
-  HttpException,
-  HttpStatus,
-  Injectable,
-  UnauthorizedException,
+    HttpException,
+    HttpStatus,
+    Injectable,
+    UnauthorizedException,
 } from '@nestjs/common';
-import { Observable, of } from 'rxjs';
-import * as bcrypt from 'bcrypt';
 import { JwtService } from '@nestjs/jwt';
-import { ErrorsEnum } from '../core/enums/errors.enum';
-import { UsersService } from '../users/users.service';
-import { Repository } from 'typeorm';
-import { User } from '../users/entities/user.entity';
 import { InjectRepository } from '@nestjs/typeorm';
+import * as bcrypt from 'bcrypt';
+import { Repository } from 'typeorm';
+import { ErrorsEnum } from '../core/enums/errors.enum';
+import { User } from '../users/entities/user.entity';
 import { LanguageEnum } from '../users/enums/language.enum';
+import { UsersService } from '../users/users.service';
+import {
+    ACCESS_TOKEN_EXPIRY,
+    BCRYPT_SALT_ROUNDS,
+    REFRESH_TOKEN_EXPIRY
+} from './constants/auth.constants';
+import { JwtPayload } from './types/auth.types';
 
 @Injectable()
 export class AuthService {
@@ -23,7 +28,7 @@ export class AuthService {
     private userRepository: Repository<User>
   ) {}
 
-  public async validateUser(email: string, password: string) {
+  public async validateUser(email: string, password: string): Promise<User> {
     const user = await this.usersService.findByEmail(email);
 
     if (!user) {
@@ -42,7 +47,7 @@ export class AuthService {
     return user;
   }
 
-  public async signUpUser(data: { email: string; password: string; name: string; language?: LanguageEnum }) {
+  public async signUpUser(data: { email: string; password: string; name: string; language?: LanguageEnum }): Promise<User> {
     const existingUser = await this.usersService.findByEmail(data.email);
 
     if (existingUser) {
@@ -52,7 +57,7 @@ export class AuthService {
       );
     }
 
-    const passwordHash = await bcrypt.hash(data.password, 10);
+    const passwordHash = await bcrypt.hash(data.password, BCRYPT_SALT_ROUNDS);
 
     const user = this.userRepository.create({
       name: data.name,
@@ -64,11 +69,11 @@ export class AuthService {
     return this.userRepository.save(user);
   }
 
-  public generateAccessToken(payload: any) {
-    return this.jwtService.sign(payload, { expiresIn: '15m' });
+  public generateAccessToken(payload: JwtPayload): string {
+    return this.jwtService.sign(payload, { expiresIn: ACCESS_TOKEN_EXPIRY });
   }
 
-  public generateRefreshToken(payload: any) {
-    return this.jwtService.sign(payload, { expiresIn: '7d' });
+  public generateRefreshToken(payload: JwtPayload): string {
+    return this.jwtService.sign(payload, { expiresIn: REFRESH_TOKEN_EXPIRY });
   }
 }

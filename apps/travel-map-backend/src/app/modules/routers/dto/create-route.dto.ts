@@ -1,8 +1,18 @@
-import { IsNotEmpty, IsString, IsArray, ValidateNested, IsDate, Validate, IsOptional, Matches } from 'class-validator';
 import { Type } from 'class-transformer';
+import {
+    IsArray,
+    IsDate,
+    IsNotEmpty,
+    IsOptional,
+    IsString,
+    Matches,
+    Validate,
+    ValidateNested,
+} from 'class-validator';
 import { IsEndDateAfterStartDate } from '../validators/is-end-date-after-start-date.validator';
 
-class Point {
+
+export class Point {
   @IsNotEmpty()
   lat: number;
 

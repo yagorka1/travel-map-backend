@@ -19,9 +19,9 @@ export class LeaderboardService {
     const users: User[] = await this.usersRepository.find();
     const routes: Route[] = await this.routesRepository.find();
 
-    const usersWithPoints = users.map((user) => {
-      const userRoutes = routes.filter((route) => route.userId === user.id);
-      const points = userRoutes.reduce((sum, route) => sum + route.pointsEarned, 0);
+    const usersWithPoints: LeaderboardUser[] = users.map((user: User) => {
+      const userRoutes: Route[] = routes.filter((route: Route) => route.userId === user.id);
+      const points: number = userRoutes.reduce((sum: number, route: Route) => sum + route.pointsEarned, 0);
 
       return {
         id: user.id,
@@ -39,11 +39,11 @@ export class LeaderboardService {
     const routes: Route[] = await this.routesRepository.find();
     const users: User[] = await this.usersRepository.find();
 
-    const userMap = new Map(users.map((user) => [user.id, user]));
+    const userMap: Map<string, User> = new Map(users.map((user: User) => [user.id, user]));
 
     return routes
-      .map((route) => {
-        const user = userMap.get(route.userId);
+      .map((route: Route) => {
+        const user: User | undefined = userMap.get(route.userId);
         return {
           id: route.id,
           name: route.name,

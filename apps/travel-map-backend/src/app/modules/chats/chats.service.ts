@@ -1,12 +1,14 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Chat } from './entities/chat.entity';
 import { Not, Repository } from 'typeorm';
-import { ChatMember } from './entities/chat-member.entity';
-import { User } from '../users/entities/user.entity';
 import { UserChatDto } from '../users/dto/user-chat.dto';
+import { User } from '../users/entities/user.entity';
+import { DEFAULT_CHAT_NAME, DEFAULT_MEMBER_ROLE } from './constants/chat.constants';
+import { ChatMember } from './entities/chat-member.entity';
+import { Chat } from './entities/chat.entity';
 import { Message } from './entities/message.entity';
 import { ChatGateway } from './gateways/chat.gateway';
+import { CreateChatData, UnreadResponse, UserChatInfo } from './types/chat.types';
 
 @Injectable()
 export class ChatsService {
@@ -25,11 +27,7 @@ export class ChatsService {
     private readonly chatGateway: ChatGateway
   ) {}
 
-  public async createChat(data: {
-    name: string;
-    ownerId: string;
-    membersIds: string[];
-  }) {
+  public async createChat(data: CreateChatData): Promise<Chat> {
     const chat: Chat = this.chatRepo.create({ name: data.name });
     await this.chatRepo.save(chat);
 
@@ -45,7 +43,7 @@ export class ChatsService {
     return chat;
   }
 
-  public async addUserToChat(chatId: string, userId: string, role = 'member') {
+  public async addUserToChat(chatId: string, userId: string, role = DEFAULT_MEMBER_ROLE): Promise<ChatMember> {
     const chat = await this.chatRepo.findOneBy({ id: chatId });
     const user = await this.userRepo.findOneBy({ id: userId });
 
@@ -55,12 +53,12 @@ export class ChatsService {
     return this.memberRepo.save(member);
   }
 
-  public async getUserChats(userId: string) {
+  public async getUserChats(userId: string): Promise<UserChatInfo[]> {
     if (!this.memberRepo) {
       return [];
     }
 
-    const members =
+    const members: ChatMember[] =
       (await this.memberRepo?.find({
         where: { user: { id: userId } },
         relations: ['chat', 'chat.members', 'chat.members.user'],
@@ -85,17 +83,17 @@ export class ChatsService {
     });
   }
 
-  async getChatMembers(chatId: string) {
+  public async getChatMembers(chatId: string): Promise<ChatMember[]> {
     return this.memberRepo.find({
       where: { chat: { id: chatId } },
       relations: ['user'],
     });
   }
 
-  public async getAvailableUsers(currentUserId: string) {
+  public async getAvailableUsers(currentUserId: string): Promise<UserChatDto[]> {
     if (!currentUserId) throw new Error('currentUserId is required');
 
-    const users = await this.userRepo.find({
+    const users: User[] = await this.userRepo.find({
       where: {
         id: Not(currentUserId),
       },
@@ -117,17 +115,17 @@ export class ChatsService {
     receiverId: string,
     senderId: string,
     chatId: string | undefined,
-  ) {
+  ): Promise<Message> {
     try {
       if (!content || !receiverId || !senderId) {
         throw new Error('Missing required fields: content, receiverId, senderId');
       }
 
-      let chat;
+      let chat: Chat | null = null;
 
       if (!chatId) {
         chat = await this.createChat({
-          name: 'Chat',
+          name: DEFAULT_CHAT_NAME,
           ownerId: senderId,
           membersIds: [senderId, receiverId],
         });
@@ -146,12 +144,12 @@ export class ChatsService {
         }
       }
 
-      const sender = await this.userRepo.findOne({ where: { id: senderId } });
+      const sender: User | null = await this.userRepo.findOne({ where: { id: senderId } });
       if (!sender) {
         throw new Error(`Sender user with id ${senderId} not found`);
       }
 
-      const message = this.messageRepo.create({
+      const message: Message = this.messageRepo.create({
         chat,
         chatId: chat.id,
         sender,
@@ -159,7 +157,7 @@ export class ChatsService {
         content,
       });
 
-      const savedMessage = await this.messageRepo.save(message);
+      const savedMessage: Message = await this.messageRepo.save(message);
       if (!savedMessage) {
         throw new Error('Failed to save message');
       }
@@ -184,7 +182,7 @@ export class ChatsService {
 
       console.log('New message created:', message.id, message.created_at);
 
-      const members = await this.memberRepo.find({ where: { chat: { id: chatId } } });
+      const members: ChatMember[] = await this.memberRepo.find({ where: { chat: { id: chatId } } });
       for (const member of members) {
         console.log('member.readAt:', member.readAt);
         const unread = message.created_at > (member.readAt || new Date(0));
@@ -198,7 +196,7 @@ export class ChatsService {
       throw new Error(`Failed to send message: ${error.message}`);
     }
   }
-  public async getMessages(chatId: string) {
+  public async getMessages(chatId: string): Promise<Message[]> {
     return this.messageRepo.find({
       where: { chat: { id: chatId } },
       relations: ['chat', 'sender'],
@@ -209,7 +207,7 @@ export class ChatsService {
     });
   }
 
-  public async markChatAsRead(chatId: string, userId: string) {
+  public async markChatAsRead(chatId: string, userId: string): Promise<void> {
     const member = await this.memberRepo.findOne({
       where: { chat: { id: chatId }, user: { id: userId } },
     });
@@ -222,8 +220,8 @@ export class ChatsService {
     await this.emitUnreadCount(userId);
   }
 
-  public async getUnreadForUser(userId: string) {
-    const members = await this.memberRepo.find({
+  public async getUnreadForUser(userId: string): Promise<UnreadResponse> {
+    const members: ChatMember[] = await this.memberRepo.find({
       where: { user: { id: userId } },
       relations: ['chat', 'chat.messages', 'chat.messages.sender'],
     });
@@ -231,7 +229,7 @@ export class ChatsService {
     const result: Array<{
       chatId: string;
       unreadCount: number;
-      lastMessage: any | null;
+      lastMessage: Message | null;
     }> = [];
 
     let totalUnread = 0;
@@ -272,7 +270,7 @@ export class ChatsService {
     };
   }
 
-  private async emitUnreadCount(userId: string) {
+  private async emitUnreadCount(userId: string): Promise<void> {
     const unread = await this.getUnreadForUser(userId);
     this.chatGateway.sendUnread(userId, unread);
   }
