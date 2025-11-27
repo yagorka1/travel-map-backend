@@ -1,17 +1,19 @@
 import {
-  Injectable,
-  HttpException,
-  HttpStatus,
+    HttpException,
+    HttpStatus,
+    Injectable,
 } from '@nestjs/common';
-import { User } from './entities/user.entity';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
 import * as bcrypt from 'bcrypt';
+import * as fs from 'fs';
+import { Repository } from 'typeorm';
+import { promisify } from 'util';
+import { ErrorsEnum } from '../core/enums/errors.enum';
+import { BCRYPT_SALT_ROUNDS } from './constants/user.constants';
 import { ChangePasswordDto } from './dto/change-password.dto';
 import { UpdateProfileDto } from './dto/update-profile.dto';
-import { ErrorsEnum } from '../core/enums/errors.enum';
-import * as fs from 'fs';
-import { promisify } from 'util';
+import { User } from './entities/user.entity';
+import { UserProfile } from './types/user.types';
 
 const unlinkAsync = promisify(fs.unlink);
 
@@ -22,16 +24,16 @@ export class UsersService {
     private userRepository: Repository<User>
   ) {}
 
-  public findAll() {
+  public findAll(): Promise<User[]> {
     return this.userRepository.find();
   }
 
-  public findByEmail(email: string): Promise<User> {
+  public findByEmail(email: string): Promise<User | null> {
     return this.userRepository.findOne({ where: { email } });
   }
 
-  public async getUserProfile(userId: string): Promise<Omit<User, 'passwordHash'>> {
-    const user = await this.userRepository.findOne({ where: { id: userId } });
+  public async getUserProfile(userId: string): Promise<UserProfile> {
+    const user: User | null = await this.userRepository.findOne({ where: { id: userId } });
 
     if (!user) {
       throw new HttpException(
@@ -40,7 +42,6 @@ export class UsersService {
       );
     }
 
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const { passwordHash, ...safeUser } = user;
     return safeUser;
   }
@@ -55,7 +56,7 @@ export class UsersService {
       );
     }
 
-    const user = await this.userRepository.findOne({ where: { id: userId } });
+    const user: User | null = await this.userRepository.findOne({ where: { id: userId } });
     if (!user) {
       throw new HttpException(
         { errorCode: ErrorsEnum.USER_NOT_FOUND },
@@ -63,7 +64,7 @@ export class UsersService {
       );
     }
 
-    const isMatch = await bcrypt.compare(currentPassword, user.passwordHash);
+    const isMatch: boolean = await bcrypt.compare(currentPassword, user.passwordHash);
     if (!isMatch) {
       throw new HttpException(
         { errorCode: ErrorsEnum.INCORRECT_CURRENT_PASSWORD },
@@ -71,7 +72,7 @@ export class UsersService {
       );
     }
 
-    user.passwordHash = await bcrypt.hash(newPassword, 10);
+    user.passwordHash = await bcrypt.hash(newPassword, BCRYPT_SALT_ROUNDS);
     await this.userRepository.save(user);
   }
 
@@ -79,8 +80,9 @@ export class UsersService {
     userId: string,
     updateProfileDto: UpdateProfileDto,
     avatarFile?: Express.Multer.File
-  ): Promise<Omit<User, 'passwordHash'>> {
-    const user = await this.userRepository.findOne({ where: { id: userId } });
+  ): Promise<UserProfile> {
+    const user: User | null = await this.userRepository.findOne({ where: { id: userId } });
+
     if (!user) {
       throw new HttpException(
         { errorCode: ErrorsEnum.USER_NOT_FOUND },
@@ -110,8 +112,8 @@ export class UsersService {
 
     await this.userRepository.save(user);
 
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const { passwordHash, ...safeUser } = user;
     return safeUser;
   }
 }
+

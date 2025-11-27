@@ -1,13 +1,16 @@
+import { JwtService } from '@nestjs/jwt';
 import {
+  ConnectedSocket,
+  MessageBody,
+  SubscribeMessage,
   WebSocketGateway,
   WebSocketServer,
-  SubscribeMessage,
-  MessageBody,
-  ConnectedSocket,
 } from '@nestjs/websockets';
-import { JwtService } from '@nestjs/jwt';
 import { Server, Socket } from 'socket.io';
+import { JwtPayload } from '../../auth/types/auth.types';
+import { Message } from '../entities/message.entity';
 import { WebSocketEvents } from '../enums/web-sockets-events.enum';
+import { UnreadResponse } from '../types/chat.types';
 
 @WebSocketGateway({ cors: { origin: '*' } })
 export class ChatGateway {
@@ -16,7 +19,7 @@ export class ChatGateway {
 
   constructor(private jwt: JwtService) {}
 
-  handleConnection(client: Socket) {
+  public handleConnection(client: Socket): void {
     const token = client.handshake.auth?.token;
 
     if (!token) {
@@ -25,10 +28,10 @@ export class ChatGateway {
     }
 
     try {
-      const payload = this.jwt.verify(token);
+      const payload: JwtPayload = this.jwt.verify<JwtPayload>(token);
       client.data.user = payload;
 
-      const userId = payload.id;
+      const userId: string = payload.id;
 
       if (userId) {
         client.join(userId);
@@ -42,15 +45,15 @@ export class ChatGateway {
   }
 
   @SubscribeMessage('join')
-  handleJoin(@MessageBody() chatId: string, @ConnectedSocket() client: Socket) {
+  public handleJoin(@MessageBody() chatId: string, @ConnectedSocket() client: Socket): void {
     client.join(chatId);
   }
 
-  public sendNewMessage(chatId: string, message: any) {
+  public sendNewMessage(chatId: string, message: Message): void {
     this.server.to(chatId).emit(WebSocketEvents.NEW_MESSAGE, message);
   }
 
-  public sendUnread(userId: string, payload: any) {
+  public sendUnread(userId: string, payload: UnreadResponse): void {
     this.server.to(userId).emit(WebSocketEvents.UNREAD_COUNT, payload);
   }
 }

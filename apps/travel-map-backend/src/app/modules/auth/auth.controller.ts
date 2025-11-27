@@ -1,18 +1,19 @@
 import {
   Body,
   Controller,
-  Get,
   HttpException,
   HttpStatus,
   Post,
   Req,
-  Res,
-  UseGuards,
+  Res
 } from '@nestjs/common';
-import { AuthService } from './auth.sevice';
-import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import { Request, Response } from 'express';
 import { ErrorsEnum } from '../core/enums/errors.enum';
+import { User } from '../users/entities/user.entity';
+import { UserProfile } from '../users/types/user.types';
+import { AuthService } from './auth.sevice';
+import { JwtPayload } from './types/auth.types';
+import { REFRESH_TOKEN_COOKIE_NAME } from './constants/auth.constants';
 
 @Controller('auth')
 export class AuthController {
@@ -22,15 +23,15 @@ export class AuthController {
   async login(
     @Body() body: { email: string; password: string },
     @Res({ passthrough: true }) res: Response,
-  ) {
-    const user = await this.authService.validateUser(body.email, body.password);
+  ): Promise<{ accessToken: string }> {
+    const user: User = await this.authService.validateUser(body.email, body.password);
 
-    const payload = { id: user.id, email: user.email };
+    const payload: JwtPayload = { id: user.id, email: user.email };
 
-    const accessToken = this.authService.generateAccessToken(payload);
-    const refreshToken = this.authService.generateRefreshToken(payload);
+    const accessToken: string = this.authService.generateAccessToken(payload);
+    const refreshToken: string = this.authService.generateRefreshToken(payload);
 
-    res.cookie('refresh_token', refreshToken, {
+    res.cookie(REFRESH_TOKEN_COOKIE_NAME, refreshToken, {
       httpOnly: true,
       secure: false,
       sameSite: 'lax',
@@ -43,16 +44,16 @@ export class AuthController {
   @Post('sign-up')
   async signUp(
     @Body() body: { email: string; password: string; name: string },
-  ) {
-    const user = await this.authService.signUpUser(body);
+  ): Promise<{ user: UserProfile }> {
+    const user: User = await this.authService.signUpUser(body);
 
     const { passwordHash, ...safeUser } = user;
     return { user: safeUser };
   }
 
   @Post('refresh')
-  async refresh(@Req() req: Request, @Res({ passthrough: true }) res: Response) {
-    const refreshToken = req.cookies['refresh_token'];
+  async refresh(@Req() req: Request, @Res({ passthrough: true }) res: Response): Promise<{ accessToken: string }> {
+    const refreshToken: string | undefined = req.cookies[REFRESH_TOKEN_COOKIE_NAME];
 
     if (!refreshToken) {
       throw new HttpException(
@@ -64,12 +65,12 @@ export class AuthController {
     }
 
     try {
-      const payload = await this.authService.jwtService.verifyAsync(refreshToken);
-      const user = { id: payload.id, email: payload.email };
-      const newAccessToken = this.authService.generateAccessToken(user);
-      const newRefreshToken = this.authService.generateRefreshToken(user);
+      const payload: JwtPayload = await this.authService.jwtService.verifyAsync(refreshToken);
+      const user: JwtPayload = { id: payload.id, email: payload.email };
+      const newAccessToken: string = this.authService.generateAccessToken(user);
+      const newRefreshToken: string = this.authService.generateRefreshToken(user);
 
-      res.cookie('refresh_token', newRefreshToken, {
+      res.cookie(REFRESH_TOKEN_COOKIE_NAME, newRefreshToken, {
         httpOnly: true,
         secure: false,
         sameSite: 'lax',
@@ -88,8 +89,8 @@ export class AuthController {
   }
 
   @Post('logout')
-  logout(@Res({ passthrough: true }) res: Response) {
-    res.clearCookie('refresh_token', { path: '/' });
+  logout(@Res({ passthrough: true }) res: Response): { success: boolean } {
+    res.clearCookie(REFRESH_TOKEN_COOKIE_NAME, { path: '/' });
     return { success: true };
   }
 }

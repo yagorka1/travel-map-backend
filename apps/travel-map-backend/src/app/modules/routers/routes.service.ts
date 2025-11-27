@@ -1,11 +1,19 @@
-import { HttpException, HttpStatus, Injectable } from "@nestjs/common";
-import { InjectRepository } from "@nestjs/typeorm";
-import { Repository } from "typeorm";
+import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
 import { getDistance } from 'geolib';
-import { Route } from "./entities/route.entity";
-import { CreateRouteDto } from "./dto/create-route.dto";
-import { ErrorsEnum } from "../core/enums/errors.enum";
+import { Repository } from 'typeorm';
+import { ErrorsEnum } from '../core/enums/errors.enum';
+import { GEOMETRY_TYPE_LINESTRING } from './constants/geo.constants';
+import {
+  POINTS_NEW_CITY,
+  POINTS_NEW_COUNTRY,
+  POINTS_VISITED_CITY,
+  POINTS_VISITED_COUNTRY,
+} from './constants/points.constants';
+import { CreateRouteDto } from './dto/create-route.dto';
+import { Route } from './entities/route.entity';
 import { GeoService } from './services/geo.service';
+import { GeocodingResult, GeoJsonGeometry, Point } from './types/route.types';
 
 @Injectable()
 export class RoutesService {
@@ -15,28 +23,38 @@ export class RoutesService {
     private geoService: GeoService,
   ) {}
 
+  /**
+   * Creates a new route for a user.
+   * Calculates distance, identifies countries and cities along the route,
+   * and assigns points based on new vs. visited locations.
+   *
+   * @param userId - ID of the user creating the route
+   * @param dto - Route creation data
+   * @returns The created route entity
+   * @throws HttpException if route creation fails
+   */
   async createRoute(userId: string, dto: CreateRouteDto): Promise<Route> {
-    try {
-      const distance = this.calculateDistance(dto.points);
+     try {
+      const distance: number = this.calculateDistance(dto.points);
 
-      const countriesSet = new Set<string>();
-      const citiesSet = new Set<string>();
+      const countriesSet: Set<string> = new Set<string>();
+      const citiesSet: Set<string> = new Set<string>();
 
       for (const p of dto.points) {
-        const data = await this.geoService.reverseGeocode(p.lat, p.lng);
+        const data: GeocodingResult = await this.geoService.reverseGeocode(p.lat, p.lng);
         if (data.country) countriesSet.add(data.country);
         if (data.city) citiesSet.add(data.city);
       }
 
-      const countries = Array.from(countriesSet);
-      const cities = Array.from(citiesSet);
+      const countries: string[] = Array.from(countriesSet);
+      const cities: string[] = Array.from(citiesSet);
 
-      const prevRoutes = await this.getUserRoutes(userId);
+      const prevRoutes: Route[] = await this.getUserRoutes(userId);
 
-      const earned = this.calculatePoints(countries, cities, prevRoutes);
+      const earned: number = this.calculatePoints(countries, cities, prevRoutes);
 
-      const geometry = {
-        type: 'LineString',
+      const geometry: GeoJsonGeometry = {
+        type: GEOMETRY_TYPE_LINESTRING,
         coordinates: dto.points.map((p) => [p.lng, p.lat]),
       };
 
@@ -53,7 +71,6 @@ export class RoutesService {
         countries,
         cities,
       });
-
     } catch (err) {
       console.error(err);
       throw new HttpException(
@@ -63,7 +80,14 @@ export class RoutesService {
     }
   }
 
-  public calculateDistance(points: CreateRouteDto['points']): number {
+  /**
+   * Calculates the total distance of a route in meters.
+   * Uses the Haversine formula via geolib to calculate distances between consecutive points.
+   *
+   * @param points - Array of geographic points defining the route
+   * @returns Total distance in meters
+   */
+  public calculateDistance(points: Point[]): number {
     let total = 0;
     for (let i = 1; i < points.length; i++) {
       total += getDistance(points[i - 1], points[i]);
@@ -71,24 +95,39 @@ export class RoutesService {
     return total;
   }
 
+  /**
+   * Calculates points earned for a route based on visited countries and cities.
+   * Awards more points for first-time visits than repeat visits.
+   *
+   * @param countries - List of countries visited in this route
+   * @param cities - List of cities visited in this route
+   * @param prevRoutes - User's previous routes to check for repeat visits
+   * @returns Total points earned for this route
+   */
   public calculatePoints(
     countries: string[],
     cities: string[],
     prevRoutes: Route[],
   ): number {
-    const prevCountries = new Set(prevRoutes.flatMap(r => r.countries));
-    const prevCities = new Set(prevRoutes.flatMap(r => r.cities));
+    const prevCountries = new Set(prevRoutes.flatMap((r) => r.countries));
+    const prevCities = new Set(prevRoutes.flatMap((r) => r.cities));
 
     let points = 0;
 
     for (const c of countries) {
-      if (!prevCountries.has(c)) points += 200;
-      else points += 20;
+      if (!prevCountries.has(c)) {
+        points += POINTS_NEW_COUNTRY;
+      } else {
+        points += POINTS_VISITED_COUNTRY;
+      }
     }
 
     for (const c of cities) {
-      if (!prevCities.has(c)) points += 30;
-      else points += 5;
+      if (!prevCities.has(c)) {
+        points += POINTS_NEW_CITY;
+      } else {
+        points += POINTS_VISITED_CITY;
+      }
     }
 
     return points;
@@ -101,9 +140,10 @@ export class RoutesService {
     });
   }
 
-  public async getRouteById(routeId: string): Promise<Route> {
+  public async getRouteById(routeId: string): Promise<Route | null> {
     return this.routeRepository.findOne({
       where: { id: routeId },
     });
   }
 }
+
