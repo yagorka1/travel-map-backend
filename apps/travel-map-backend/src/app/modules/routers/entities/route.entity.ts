@@ -25,13 +25,19 @@ export class Route {
   pointsEarned: number;
 
   @Column({ type: 'varchar', length: 7, default: '#3B82F6' })
-color: string;
+  color: string;
 
   @Column()
   startDate: Date;
 
   @Column()
   endDate: Date;
+
+  @Column({ type: 'text', array: true, default: [] })
+  countries: string[];
+
+  @Column({ type: 'text', array: true, default: [] })
+  cities: string[];
 
   @CreateDateColumn()
   createdAt: Date;
