@@ -1,17 +1,19 @@
 import { Module } from '@nestjs/common';
+import { TypeOrmModule } from '@nestjs/typeorm';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { AuthModule } from './modules/auth/auth.module';
-import { TypeOrmModule } from '@nestjs/typeorm';
-import { UsersModule } from './modules/users/users.module';
-import { User } from './modules/users/entities/user.entity';
 import { ChatsModule } from './modules/chats/chats.module';
-import { Message } from './modules/chats/entities/message.entity';
 import { ChatMember } from './modules/chats/entities/chat-member.entity';
 import { Chat } from './modules/chats/entities/chat.entity';
-import { RoutesModule } from './modules/routers/routes.module';
+import { Message } from './modules/chats/entities/message.entity';
 import { Route } from './modules/routers/entities/route.entity';
-import { LeaderboardModule } from './modules/leaderboard/leaderboard.module';
+import { RoutesModule } from './modules/routers/routes.module';
+import { StatisticsModule } from './modules/statistics/statistics.module';
+import { User } from './modules/users/entities/user.entity';
+import { UsersModule } from './modules/users/users.module';
+
+import { Level } from './modules/statistics/entities/level.entity';
 
 @Module({
   imports: [
@@ -19,7 +21,7 @@ import { LeaderboardModule } from './modules/leaderboard/leaderboard.module';
     UsersModule,
     ChatsModule,
     RoutesModule,
-    LeaderboardModule,
+    StatisticsModule,
     TypeOrmModule.forRoot({
       type: 'postgres',
       host: 'localhost',
@@ -27,7 +29,7 @@ import { LeaderboardModule } from './modules/leaderboard/leaderboard.module';
       username: 'myuser',
       password: 'password',
       database: 'travelmap',
-      entities: [User, Chat, ChatMember, Message, Route],
+      entities: [User, Chat, ChatMember, Message, Route, Level],
       synchronize: true,
     }),
   ],
