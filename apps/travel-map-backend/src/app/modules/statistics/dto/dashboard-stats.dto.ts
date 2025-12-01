@@ -16,4 +16,5 @@ export class DashboardStatsDto {
   totalPoints: number;
   level: Level;
   nextLevel: Level | null;
+  visitedCountriesList: string[];
 }
