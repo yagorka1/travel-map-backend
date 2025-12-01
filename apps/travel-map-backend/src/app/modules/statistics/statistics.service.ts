@@ -117,6 +117,7 @@ export class StatisticsService {
       totalPoints,
       level: currentLevel,
       nextLevel,
+      visitedCountriesList: Array.from(countriesSet),
     };
   }
 
