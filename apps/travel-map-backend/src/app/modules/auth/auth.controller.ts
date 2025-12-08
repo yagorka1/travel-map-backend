@@ -93,4 +93,21 @@ export class AuthController {
     res.clearCookie(REFRESH_TOKEN_COOKIE_NAME, { path: '/' });
     return { success: true };
   }
+
+@Post('google')
+async google(
+  @Body('credential') token: string,
+  @Res({ passthrough: true }) res: Response,
+) {
+  const { accessToken, refreshToken } = await this.authService.loginWithGoogle(token);
+
+  res.cookie(REFRESH_TOKEN_COOKIE_NAME, refreshToken, {
+    httpOnly: true,
+    secure: false,
+    sameSite: 'lax',
+    path: '/',
+  });
+
+  return { accessToken };
+}
 }

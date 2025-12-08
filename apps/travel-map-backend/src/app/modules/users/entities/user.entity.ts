@@ -1,10 +1,10 @@
 import {
-  Entity,
   Column,
-  PrimaryGeneratedColumn,
   CreateDateColumn,
-  UpdateDateColumn,
+  Entity,
   OneToMany,
+  PrimaryGeneratedColumn,
+  UpdateDateColumn,
 } from 'typeorm';
 import { ChatMember } from '../../chats/entities/chat-member.entity';
 import { LanguageEnum } from '../enums/language.enum';
@@ -20,8 +20,8 @@ export class User {
   @Column()
   email: string;
 
-  @Column()
-  passwordHash: string;
+  @Column({ nullable: true })
+  passwordHash?: string;
 
   @Column({ nullable: true })
   avatarUrl?: string;

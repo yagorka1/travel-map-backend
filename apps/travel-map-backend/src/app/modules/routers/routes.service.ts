@@ -5,10 +5,10 @@ import { Repository } from 'typeorm';
 import { ErrorsEnum } from '../core/enums/errors.enum';
 import { GEOMETRY_TYPE_LINESTRING } from './constants/geo.constants';
 import {
-  POINTS_NEW_CITY,
-  POINTS_NEW_COUNTRY,
-  POINTS_VISITED_CITY,
-  POINTS_VISITED_COUNTRY,
+    POINTS_NEW_CITY,
+    POINTS_NEW_COUNTRY,
+    POINTS_VISITED_CITY,
+    POINTS_VISITED_COUNTRY,
 } from './constants/points.constants';
 import { CreateRouteDto } from './dto/create-route.dto';
 import { Route } from './entities/route.entity';
@@ -72,7 +72,16 @@ export class RoutesService {
         cities,
       });
     } catch (err) {
-      console.error(err);
+      console.error('Create route error:', err);
+      
+      // Check if it's a geocoding error
+      if (err.message?.includes('Nominatim')) {
+        throw new HttpException(
+          { errorCode: ErrorsEnum.GEOCODING_FAILED },
+          HttpStatus.SERVICE_UNAVAILABLE
+        );
+      }
+      
       throw new HttpException(
         { errorCode: ErrorsEnum.INTERNAL_ERROR },
         HttpStatus.INTERNAL_SERVER_ERROR

@@ -1,10 +1,10 @@
 import { Controller, Get, Request, UseGuards } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { DashboardStatsDto } from './dto/dashboard-stats.dto';
+import { Level } from './entities/level.entity';
 import { LeaderboardTrip } from './interfaces/leaderboard-trip.interface';
 import { LeaderboardUser } from './interfaces/leaderboard-user.interface';
 import { StatisticsService } from './statistics.service';
-import { Level } from './entities/level.entity';
 
 @Controller('statistics')
 export class StatisticsController {
@@ -23,7 +23,7 @@ export class StatisticsController {
   @Get('dashboard')
   @UseGuards(JwtAuthGuard)
   public async getDashboardStats(@Request() req): Promise<DashboardStatsDto> {
-    return this.statisticsService.getUserDashboardStats(req.user.id);
+    return this.statisticsService.getUserDashboardStats(req.user.userId);
   }
 
   @Get('levels')
