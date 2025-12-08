@@ -12,3 +12,4 @@ import { StatisticsService } from './statistics.service';
   providers: [StatisticsService],
 })
 export class StatisticsModule {}
+

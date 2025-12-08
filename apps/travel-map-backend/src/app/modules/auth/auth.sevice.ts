@@ -1,21 +1,22 @@
 import {
-    HttpException,
-    HttpStatus,
-    Injectable,
-    UnauthorizedException,
+  HttpException,
+  HttpStatus,
+  Injectable,
+  UnauthorizedException,
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { InjectRepository } from '@nestjs/typeorm';
 import * as bcrypt from 'bcrypt';
+import { OAuth2Client } from 'google-auth-library';
 import { Repository } from 'typeorm';
 import { ErrorsEnum } from '../core/enums/errors.enum';
 import { User } from '../users/entities/user.entity';
 import { LanguageEnum } from '../users/enums/language.enum';
 import { UsersService } from '../users/users.service';
 import {
-    ACCESS_TOKEN_EXPIRY,
-    BCRYPT_SALT_ROUNDS,
-    REFRESH_TOKEN_EXPIRY
+  ACCESS_TOKEN_EXPIRY,
+  BCRYPT_SALT_ROUNDS,
+  REFRESH_TOKEN_EXPIRY
 } from './constants/auth.constants';
 import { JwtPayload } from './types/auth.types';
 
@@ -27,6 +28,8 @@ export class AuthService {
     @InjectRepository(User)
     private userRepository: Repository<User>
   ) {}
+
+  private googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
   public async validateUser(email: string, password: string): Promise<User> {
     const user = await this.usersService.findByEmail(email);
@@ -75,5 +78,60 @@ export class AuthService {
 
   public generateRefreshToken(payload: JwtPayload): string {
     return this.jwtService.sign(payload, { expiresIn: REFRESH_TOKEN_EXPIRY });
+  }
+
+  public async loginWithGoogle(token: string): Promise<{ accessToken: string; refreshToken: string }> {
+    try {
+      const ticket = await this.googleClient.verifyIdToken({
+        idToken: token,
+        audience: process.env.GOOGLE_CLIENT_ID,
+      });
+
+      const payload = ticket.getPayload();
+
+      if (!payload || !payload.email) {
+        throw new HttpException(
+          { errorCode: ErrorsEnum.GOOGLE_AUTH_FAILED },
+          HttpStatus.UNAUTHORIZED,
+        );
+      }
+
+      const email = payload.email;
+      const name = payload.name ?? 'User';
+      const avatarUrl = payload?.picture;
+
+      let user = await this.usersService.findByEmail(email);
+
+      if (!user) {
+        user = await this.userRepository.save(
+          this.userRepository.create({
+            email,
+            name,
+            avatarUrl,
+            language: LanguageEnum.EN,
+          }),
+        );
+      } else if (!user.avatarUrl && avatarUrl) {
+        user.avatarUrl = avatarUrl;
+        user = await this.userRepository.save(user);
+      }
+
+      const userPayload: JwtPayload = { id: user.id, email: user.email };
+      const accessToken = this.generateAccessToken(userPayload);
+      const refreshToken = this.generateRefreshToken(userPayload);
+
+      return { accessToken, refreshToken };
+    } catch (error) {
+      console.error('Google login error:', error);
+
+      if (error instanceof HttpException) {
+        throw error;
+      }
+
+      throw new HttpException(
+        { errorCode: ErrorsEnum.GOOGLE_AUTH_FAILED },
+        HttpStatus.UNAUTHORIZED,
+      );
+    }
   }
 }
