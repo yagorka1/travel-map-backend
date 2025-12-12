@@ -2,7 +2,9 @@
   "name": "@travel-map-backend/source",
   "version": "0.0.0",
   "license": "MIT",
-  "scripts": {},
+  "scripts": {
+    "build": "nx build travel-map-backend --skip-nx-cache"
+  },
   "private": true,
   "dependencies": {
     "@nestjs/common": "^11.0.0",
