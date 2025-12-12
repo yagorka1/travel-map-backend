@@ -32,17 +32,9 @@ ConfigModule.forRoot({
       useFactory: (configService: ConfigService) => ({
         type: 'postgres',
         url: configService.get<string>('DATABASE_URL'),
-        host: configService.get<string>('DB_HOST') || 'localhost',
-        port: configService.get<number>('DB_PORT') || 5432,
-        username: configService.get<string>('DB_USERNAME') || 'myuser',
-        password: configService.get<string>('DB_PASSWORD') || 'password',
-        database: configService.get<string>('DB_NAME') || 'travelmap',
         entities: [User, Chat, ChatMember, Message, Route, Level],
         synchronize: true,
-        ssl:
-          configService.get<string>('NODE_ENV') === 'production'
-            ? { rejectUnauthorized: false }
-            : false,
+        ssl: configService.get<string>('NODE_ENV') === 'production' ? { rejectUnauthorized: false } : false,
       }),
     }),
   ],
