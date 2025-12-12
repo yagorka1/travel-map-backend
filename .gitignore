@@ -1,5 +1,7 @@
 # See https://docs.github.com/en/get-started/getting-started-with-git/ignoring-files for more about ignoring files.
 
+.env
+
 # compiled output
 dist
 tmp
@@ -37,6 +39,9 @@ testem.log
 # System Files
 .DS_Store
 Thumbs.db
+
+# Uploaded files
+uploads/
 
 .nx/cache
 .nx/workspace-data
