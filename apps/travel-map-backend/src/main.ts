@@ -1,10 +1,10 @@
 import { Logger, ValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
-import { AppModule } from './app/app.module';
 import cookieParser from 'cookie-parser';
-import { ErrorsFilter } from './app/modules/core/filters/errors.filter';
-import { join } from 'path';
 import * as express from 'express';
+import { join } from 'path';
+import { AppModule } from './app/app.module';
+import { ErrorsFilter } from './app/modules/core/filters/errors.filter';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
@@ -23,7 +23,7 @@ async function bootstrap() {
   app.use(cookieParser());
 
   app.enableCors({
-    origin: 'http://localhost:4200',
+    origin: process.env.WEB_URL || 'http://localhost:4200',
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization'],
     credentials: true,
