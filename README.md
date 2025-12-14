@@ -1,82 +1,83 @@
 # TravelMapBackend
 
-<a alt="Nx logo" href="https://nx.dev" target="_blank" rel="noreferrer"><img src="https://raw.githubusercontent.com/nrwl/nx/master/images/nx-logo.png" width="45"></a>
+Overview of the backend API for the Travel Map application. This project provides a robust backend infrastructure handling user authentication, travel routing, chats, and statistics.
 
-✨ Your new, shiny [Nx workspace](https://nx.dev) is almost ready ✨.
+## Features
 
-[Learn more about this workspace setup and its capabilities](https://nx.dev/nx-api/nest?utm_source=nx_project&amp;utm_medium=readme&amp;utm_campaign=nx_projects) or run `npx nx graph` to visually explore what was created. Now, let's get you up to speed!
+- **Authentication**: Secure user authentication using JWT and Passport strategies (including Google Auth).
+- **User Management**: User profile handling and management.
+- **Travel Plans**: Routing modules to manage travel plans and maps.
+- **Chats**: Real-time chat functionality using Socket.io.
+- **Statistics**: Dashboard statistics and data analysis.
+- **Media**: Image uploads and serving static files.
 
-## Finish your CI setup
+## Architecture
 
-[Click here to finish setting up your workspace!](https://cloud.nx.app/connect/DDwnkLD0nV)
+- Feature-based modular architecture (NestJS modules)
+- Clear separation between controllers, services, and data layers
+- DTO-based validation using class-validator
+- Real-time communication via WebSockets (Socket.io)
 
+## Tech Stack
 
-## Run tasks
+- **Framework**: [NestJS](https://nestjs.com/)
+- **Language**: TypeScript
+- **Database**: PostgreSQL with TypeORM
+- **Real-time**: Socket.io
+- **Workspace**: [Nx](https://nx.dev)
+- **Validation**: class-validator, class-transformer
 
-To run the dev server for your app, use:
+## Prerequisites
 
-```sh
+Ensure you have the following installed:
+
+- [Node.js](https://nodejs.org/) (v16+)
+- [PostgreSQL](https://www.postgresql.org/)
+- npm or pnpm
+
+## Environment Setup
+
+Create a `.env` file in the root directory (if not already present) and configure your environment variables:
+
+```env
+PORT=3000
+DATABASE_HOST=localhost
+DATABASE_PORT=5432
+DATABASE_USER=postgres
+DATABASE_PASSWORD=your_password
+DATABASE_NAME=travel_map
+JWT_SECRET=your_jwt_secret
+# Add other necessary variables
+```
+
+## Running the Application
+
+### Development
+
+To start the application in development mode:
+
+```bash
 npx nx serve travel-map-backend
 ```
 
-To create a production bundle:
+### Production Build
 
-```sh
+To build the application for production:
+
+```bash
 npx nx build travel-map-backend
 ```
 
-To see all available targets to run for a project, run:
+### Testing
 
-```sh
-npx nx show project travel-map-backend
+To run unit tests:
+
+```bash
+npx nx test travel-map-backend
 ```
 
-These targets are either [inferred automatically](https://nx.dev/concepts/inferred-tasks?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects) or defined in the `project.json` or `package.json` files.
+## Project Structure
 
-[More about running tasks in the docs &raquo;](https://nx.dev/features/run-tasks?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects)
-
-## Add new projects
-
-While you could add new projects to your workspace manually, you might want to leverage [Nx plugins](https://nx.dev/concepts/nx-plugins?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects) and their [code generation](https://nx.dev/features/generate-code?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects) feature.
-
-Use the plugin's generator to create new projects.
-
-To generate a new application, use:
-
-```sh
-npx nx g @nx/nest:app demo
-```
-
-To generate a new library, use:
-
-```sh
-npx nx g @nx/node:lib mylib
-```
-
-You can use `npx nx list` to get a list of installed plugins. Then, run `npx nx list <plugin-name>` to learn about more specific capabilities of a particular plugin. Alternatively, [install Nx Console](https://nx.dev/getting-started/editor-setup?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects) to browse plugins and generators in your IDE.
-
-[Learn more about Nx plugins &raquo;](https://nx.dev/concepts/nx-plugins?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects) | [Browse the plugin registry &raquo;](https://nx.dev/plugin-registry?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects)
-
-
-[Learn more about Nx on CI](https://nx.dev/ci/intro/ci-with-nx#ready-get-started-with-your-provider?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects)
-
-## Install Nx Console
-
-Nx Console is an editor extension that enriches your developer experience. It lets you run tasks, generate code, and improves code autocompletion in your IDE. It is available for VSCode and IntelliJ.
-
-[Install Nx Console &raquo;](https://nx.dev/getting-started/editor-setup?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects)
-
-## Useful links
-
-Learn more:
-
-- [Learn more about this workspace setup](https://nx.dev/nx-api/nest?utm_source=nx_project&amp;utm_medium=readme&amp;utm_campaign=nx_projects)
-- [Learn about Nx on CI](https://nx.dev/ci/intro/ci-with-nx?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects)
-- [Releasing Packages with Nx release](https://nx.dev/features/manage-releases?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects)
-- [What are Nx plugins?](https://nx.dev/concepts/nx-plugins?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects)
-
-And join the Nx community:
-- [Discord](https://go.nx.dev/community)
-- [Follow us on X](https://twitter.com/nxdevtools) or [LinkedIn](https://www.linkedin.com/company/nrwl)
-- [Our Youtube channel](https://www.youtube.com/@nxdevtools)
-- [Our blog](https://nx.dev/blog?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects)
+- `apps/travel-map-backend`: Main application source code.
+  - `src/app/modules`: Feature modules (Auth, Users, Chats, etc.).
+  - `src/main.ts`: Application entry point.
