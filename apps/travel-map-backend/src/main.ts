@@ -14,9 +14,13 @@ async function bootstrap() {
   app.useGlobalPipes(new ValidationPipe({ transform: true }));
 
   app.use(
-  '/uploads',
-  express.static(join(process.cwd(), 'uploads'))
-);
+    '/uploads',
+    express.static(join(process.cwd(), 'uploads'), {
+      setHeaders: (res) => {
+        res.setHeader('Access-Control-Allow-Origin', process.env.WEB_URL || 'http://localhost:4200');
+      },
+    }),
+  );
 
   const port = process.env.PORT || 3000;
 
