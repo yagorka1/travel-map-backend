@@ -24,9 +24,7 @@ export class AuthController {
     @Body() body: { email: string; password: string },
     @Res({ passthrough: true }) res: Response,
   ): Promise<{ accessToken: string }> {
-    console.log('body')
     const user: User = await this.authService.validateUser(body.email, body.password);
-    console.log('after user body')
 
     const payload: JwtPayload = { id: user.id, email: user.email };
 
@@ -47,7 +45,6 @@ export class AuthController {
   async signUp(
     @Body() body: { email: string; password: string; name: string },
   ): Promise<{ user: UserProfile }> {
-    console.log('sign up', body)
     const user: User = await this.authService.signUpUser(body);
 
     const { passwordHash, ...safeUser } = user;
