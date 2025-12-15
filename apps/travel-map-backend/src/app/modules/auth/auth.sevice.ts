@@ -32,44 +32,65 @@ export class AuthService {
   private googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
   public async validateUser(email: string, password: string): Promise<User> {
-    const user = await this.usersService.findByEmail(email);
+    try {
+      console.log('validate', email);
 
-    if (!user) {
-      throw new HttpException(
-        { errorCode: ErrorsEnum.INVALID_LOGIN_OR_PASSWORD },
-        HttpStatus.UNAUTHORIZED,
-      );
+      const user = await this.usersService.findByEmail(email);
+      console.log('user:', user);
+
+      if (!user) {
+        throw new HttpException(
+          { errorCode: ErrorsEnum.INVALID_LOGIN_OR_PASSWORD },
+          HttpStatus.UNAUTHORIZED,
+        );
+      }
+
+      const isMatch = await bcrypt.compare(password, user.passwordHash);
+
+      if (!isMatch) {
+        throw new UnauthorizedException();
+      }
+
+      return user;
+    } catch (e) {
+      console.error('❌ validateUser error:', e);
+      throw e;
     }
-
-    const isMatch = await bcrypt.compare(password, user.passwordHash);
-
-    if (!isMatch) {
-      throw new UnauthorizedException();
-    }
-
-    return user;
   }
 
-  public async signUpUser(data: { email: string; password: string; name: string; language?: LanguageEnum }): Promise<User> {
-    const existingUser = await this.usersService.findByEmail(data.email);
+  public async signUpUser(data: {
+    email: string;
+    password: string;
+    name: string;
+    language?: LanguageEnum;
+  }): Promise<User> {
+    try {
+      console.log('signUpUser:', data.email);
 
-    if (existingUser) {
-      throw new HttpException(
-        { errorCode: ErrorsEnum.USER_ALREADY_EXISTS },
-        HttpStatus.BAD_REQUEST,
-      );
+      const existingUser = await this.usersService.findByEmail(data.email);
+      console.log('existingUser:', existingUser);
+
+      if (existingUser) {
+        throw new HttpException(
+          { errorCode: ErrorsEnum.USER_ALREADY_EXISTS },
+          HttpStatus.BAD_REQUEST,
+        );
+      }
+
+      const passwordHash = await bcrypt.hash(data.password, BCRYPT_SALT_ROUNDS);
+
+      const user = this.userRepository.create({
+        name: data.name,
+        email: data.email,
+        passwordHash,
+        language: data.language ?? LanguageEnum.EN,
+      });
+
+      return await this.userRepository.save(user);
+    } catch (e) {
+      console.error('❌ signUpUser error:', e);
+      throw e;
     }
-
-    const passwordHash = await bcrypt.hash(data.password, BCRYPT_SALT_ROUNDS);
-
-    const user = this.userRepository.create({
-      name: data.name,
-      email: data.email,
-      passwordHash,
-      language: data.language || LanguageEnum.EN,
-    });
-
-    return this.userRepository.save(user);
   }
 
   public generateAccessToken(payload: JwtPayload): string {
