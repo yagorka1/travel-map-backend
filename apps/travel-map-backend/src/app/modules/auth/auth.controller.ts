@@ -90,24 +90,30 @@ export class AuthController {
 
   @Post('logout')
   logout(@Res({ passthrough: true }) res: Response): { success: boolean } {
-    res.clearCookie(REFRESH_TOKEN_COOKIE_NAME, { path: '/' });
+    res.clearCookie(REFRESH_TOKEN_COOKIE_NAME, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+      path: '/',
+    });
+    
     return { success: true };
   }
 
-@Post('google')
-async google(
-  @Body('credential') token: string,
-  @Res({ passthrough: true }) res: Response,
-) {
-  const { accessToken, refreshToken } = await this.authService.loginWithGoogle(token);
+  @Post('google')
+  async google(
+    @Body('credential') token: string,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    const { accessToken, refreshToken } = await this.authService.loginWithGoogle(token);
 
-  res.cookie(REFRESH_TOKEN_COOKIE_NAME, refreshToken, {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
-    sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
-    path: '/',
-  });
+    res.cookie(REFRESH_TOKEN_COOKIE_NAME, refreshToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+      path: '/',
+    });
 
-  return { accessToken };
-}
+    return { accessToken };
+  }
 }
