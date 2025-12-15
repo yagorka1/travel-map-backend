@@ -109,6 +109,7 @@ export class AuthService {
             name,
             avatarUrl,
             language: LanguageEnum.EN,
+            isOAuth: true,
           }),
         );
       } else if (!user.avatarUrl && avatarUrl) {

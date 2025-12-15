@@ -44,4 +44,7 @@ export class User {
 
   @OneToMany(() => ChatMember, (member) => member.user)
   chats: ChatMember[];
+
+  @Column({ default: false })
+  isOAuth: boolean;
 }
