@@ -96,7 +96,7 @@ export class AuthController {
       sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
       path: '/',
     });
-    
+
     return { success: true };
   }
 
