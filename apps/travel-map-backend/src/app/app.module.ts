@@ -17,6 +17,7 @@ import { ChatMember } from './modules/chats/entities/chat-member.entity';
 import { Message } from './modules/chats/entities/message.entity';
 import { Route } from './modules/routers/entities/route.entity';
 import { Level } from './modules/statistics/entities/level.entity';
+import { DatabaseLoggerService } from './database-logger-service';
 
 @Module({
   imports: [
@@ -57,6 +58,6 @@ import { Level } from './modules/statistics/entities/level.entity';
     StatisticsModule,
   ],
   controllers: [AppController],
-  providers: [AppService],
+  providers: [AppService, DatabaseLoggerService],
 })
 export class AppModule {}
