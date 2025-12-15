@@ -33,10 +33,7 @@ export class AuthService {
 
   public async validateUser(email: string, password: string): Promise<User> {
     try {
-      console.log('validate', email);
-
       const user = await this.usersService.findByEmail(email);
-      console.log('user:', user);
 
       if (!user) {
         throw new HttpException(
@@ -65,10 +62,7 @@ export class AuthService {
     language?: LanguageEnum;
   }): Promise<User> {
     try {
-      console.log('signUpUser:', data.email);
-
       const existingUser = await this.usersService.findByEmail(data.email);
-      console.log('existingUser:', existingUser);
 
       if (existingUser) {
         throw new HttpException(

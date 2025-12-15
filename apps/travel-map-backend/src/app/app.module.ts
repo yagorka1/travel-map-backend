@@ -35,7 +35,7 @@ import { DatabaseLoggerService } from './database-logger-service';
               type: 'postgres',
               url: config.get<string>('DATABASE_URL'),
               entities: [User, Chat, ChatMember, Message, Route, Level],
-              synchronize: false,
+              synchronize: true,
               ssl: { rejectUnauthorized: false },
             }
           : {
